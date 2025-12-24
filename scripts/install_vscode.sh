@@ -1,27 +1,30 @@
 #!/bin/bash
-
-# 1. Define the Download URL (Linux x64)
-URL="https://code.visualstudio.com/sha/download?build=stable&os=cli-alpine-x64"
+set -e
 
 echo "--- 1. Downloading VS Code CLI ---"
-# -L follows redirects, -k is useful if certs are missing on old VMs
-curl -Lk "$URL" --output vscode_cli.tar.gz
+# Fixed: Added -L to follow redirects and output to a specific filename
+curl -Lk 'https://code.visualstudio.com/sha/download?build=stable&os=cli-linux-x64' -o vscode_cli.tar.gz
 
 echo "--- 2. Extracting and Installing ---"
+# Extract the archive
 tar -xf vscode_cli.tar.gz
-# Move to /usr/local/bin so it can be run from anywhere
-sudo mv code /usr/local/bin/
 rm vscode_cli.tar.gz
 
+# Move binary to global path (requires sudo)
+echo "Installing 'code' binary to /usr/local/bin..."
+sudo mv code /usr/local/bin/
+
 echo "--- 3. Enabling Systemd Linger ---"
-# This ensures the service starts on boot even if you aren't logged in
+# Ensures the service keeps running when you disconnect
 sudo loginctl enable-linger $USER
 
 echo "--- Installation Complete! ---"
-echo ""
-echo "To finish the setup, you must authenticate once manually:"
-echo "1. Run this command:    code tunnel"
-echo "2. Follow the login instructions (GitHub/Microsoft)."
-echo "3. Once connected, press Ctrl+C to stop it."
-echo "4. Finally, install the permanent service by running:"
-echo "   ./code tunnel service install"
+echo "Initializing the Tunnel..."
+echo "1. Copy the 8-digit code shown below."
+echo "2. Go to https://github.com/login/device in your browser."
+echo "3. After you authenticate, press Ctrl+C to stop this, then run:"
+echo "   code tunnel service install"
+echo "-----------------------------------------------------"
+
+# Automatically run the initial command to start the auth flow
+code tunnel
