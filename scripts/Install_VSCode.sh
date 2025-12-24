@@ -2,7 +2,7 @@
 
 # ================= CONFIGURATION =================
 # The user the service runs as (keep as root or change to 'chester')
-SERVICE_USER="root"
+SERVICE_USER="chester"
 
 # The directory VS Code will open by default
 WORK_DIR="/home/chester"
