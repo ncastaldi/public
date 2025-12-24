@@ -58,8 +58,8 @@ sudo apt install -y nfs-common
 sudo mkdir -p /mnt/thelab
 
 # Define Variables
-NFS_HOST="Volume1"
-NFS_REMOTE_PATH="/appdata/.thelab"
+NFS_HOST="10.0.0.250"
+NFS_REMOTE_PATH="/Volume1/appdata"
 LOCAL_MOUNT_POINT="/mnt/thelab"
 
 # Add to /etc/fstab for persistence
