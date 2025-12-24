@@ -5,7 +5,7 @@
 SERVICE_USER="root"
 
 # The directory VS Code will open by default
-WORK_DIR="/volume1/public"
+WORK_DIR="/home/chester"
 
 # The installation path
 INSTALL_PATH="/usr/bin/code"
