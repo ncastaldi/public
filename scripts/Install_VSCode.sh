@@ -18,7 +18,7 @@ sudo systemctl stop code-tunnel 2>/dev/null
 
 echo ">>> 2. Downloading VS Code CLI (Alpine/Static Build)..."
 # We use the Alpine build because it is statically linked and works on all Linux distros
-curl -Lk 'https://code.visualstudio.com/sha/download?build=stable&os=cli-alpine-x64' -o vscode_cli.tar.gz
+sudo curl -Lk 'https://code.visualstudio.com/sha/download?build=stable&os=cli-alpine-x64' -o vscode_cli.tar.gz
 
 # Check if download succeeded (size check)
 FILE_SIZE=$(stat -c%s "vscode_cli.tar.gz")
