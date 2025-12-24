@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 1. Define the Download URL (Linux x64)
-URL="https://code.visualstudio.com/sha/download?build=stable&os=cli-linux-x64"
+URL="https://code.visualstudio.com/sha/download?build=stable&os=cli-alpine-x64"
 
 echo "--- 1. Downloading VS Code CLI ---"
 # -L follows redirects, -k is useful if certs are missing on old VMs
