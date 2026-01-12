@@ -29,7 +29,7 @@ if ! [ -x "$(command -v docker)" ]; then
     sudo apt install -y docker-compose-plugin
 fi
 
-# --- 4. VS CODE TUNNEL SETUP ---
+# --- 4. VS CODE TUNNEL SETUP (Hardened) ---
 ARCH=$(uname -m)
 case $ARCH in
     x86_64)  PLAT="cli-linux-x64" ;;
@@ -38,12 +38,24 @@ case $ARCH in
 esac
 
 echo "💻 Installing VS Code CLI ($ARCH)..."
-curl -Lk "https://code.visualstudio.com/sha/download?build=stable&os=$PLAT" --output vscode_cli.tar.gz
-tar -xf vscode_cli.tar.gz && sudo mv code /usr/local/bin/ && rm vscode_cli.tar.gz
+# Using the specific 'update.code' redirect which is more reliable for curl
+URL="https://update.code.visualstudio.com/latest/$PLAT/stable"
+
+curl -Lk "$URL" --output vscode_cli.tar.gz
+
+# SRE Check: Verify file size is > 1MB
+FILESIZE=$(stat -c%s "vscode_cli.tar.gz")
+if [ "$FILESIZE" -lt 1000000 ]; then
+    echo "❌ Error: VS Code download failed or returned invalid file (Size: $FILESIZE bytes)."
+    exit 1
+fi
+
+tar -xf vscode_cli.tar.gz
+sudo mv code /usr/local/bin/
+rm vscode_cli.tar.gz
 
 sudo loginctl enable-linger $USER
 code tunnel service install --accept-server-license-terms --name "$(hostname)" --provider github
-
 # --- 5. MONITORING STACK (Gatus/Beszel/Dozzle) ---
 STACK_DIR="/opt/stacks/monitoring"
 sudo mkdir -p "$STACK_DIR/gatus-config"
