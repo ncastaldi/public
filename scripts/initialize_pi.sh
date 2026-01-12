@@ -1,19 +1,25 @@
 #!/bin/bash
-# Frank Meadows - Modular Pi Bootstrap v1.3
-# Focused on: Gatus (Observability), Beszel (Resources), Dozzle (Logs)
+# Frank Meadows - Ultimate Pi Bootstrap v1.4
+# Includes: Docker, Monitoring Agents, VS Code Tunnel, and Ansible
 
-set -e # Exit on error
+set -e
 set -o pipefail
 
-echo "🚀 Starting Raspberry Pi Bootstrap..."
+echo "🚀 Starting Raspberry Pi SRE Bootstrap..."
 
-# --- 1. SYSTEM REFRESH ---
-echo "🔄 Updating system packages..."
+# --- 1. SYSTEM REFRESH & ESSENTIALS ---
+echo "🔄 Updating system and installing dependencies..."
 sudo apt update && sudo apt full-upgrade -y
+sudo apt install -y vim git curl htop build-essential ca-certificates python3-pip python3-venv
 
-# --- 2. INSTALL ESSENTIALS ---
-echo "🛠️ Installing essential tools..."
-sudo apt install -y vim git curl htop build-essential ca-certificates
+# --- 2. ANSIBLE INSTALLATION ---
+# Installing via apt for stability on Debian-based systems
+if ! [ -x "$(command -v ansible)" ]; then
+    echo "📜 Installing Ansible..."
+    sudo apt install -y ansible
+else
+    echo "📜 Ansible already installed."
+fi
 
 # --- 3. DOCKER ENGINE SETUP ---
 if ! [ -x "$(command -v docker)" ]; then
@@ -21,68 +27,69 @@ if ! [ -x "$(command -v docker)" ]; then
     curl -sSL https://get.docker.com | sh
     sudo usermod -aG docker "$USER"
     sudo apt install -y docker-compose-plugin
-else
-    echo "🐳 Docker already installed, skipping..."
 fi
 
-# --- 4. CONFIGURATION: GATUS ---
+# --- 4. VS CODE TUNNEL SETUP ---
+ARCH=$(uname -m)
+case $ARCH in
+    x86_64)  PLAT="cli-linux-x64" ;;
+    aarch64) PLAT="cli-linux-arm64" ;;
+    *)       echo "❌ Unsupported arch: $ARCH"; exit 1 ;;
+esac
+
+echo "💻 Installing VS Code CLI ($ARCH)..."
+curl -Lk "https://code.visualstudio.com/sha/download?build=stable&os=$PLAT" --output vscode_cli.tar.gz
+tar -xf vscode_cli.tar.gz && sudo mv code /usr/local/bin/ && rm vscode_cli.tar.gz
+
+sudo loginctl enable-linger $USER
+code tunnel service install --accept-server-license-terms --name "$(hostname)" --provider github
+
+# --- 5. MONITORING STACK (Gatus/Beszel/Dozzle) ---
 STACK_DIR="/opt/stacks/monitoring"
 sudo mkdir -p "$STACK_DIR/gatus-config"
 sudo chown -R "$USER:$USER" /opt/stacks
 
-echo "📝 Writing Gatus configuration..."
 cat <<EOF > "$STACK_DIR/gatus-config/config.yaml"
 endpoints:
   - name: TerraMaster
     url: http://10.0.0.250
     interval: 30s
-    conditions:
-      - "[STATUS] == 200"
-
+    conditions: [" [STATUS] == 200 "]
   - name: Synology
     url: http://10.0.0.249
     interval: 30s
-    conditions:
-      - "[STATUS] == 200"
+    conditions: [" [STATUS] == 200 "]
 EOF
 
-# --- 5. AGENT STACK DEPLOYMENT ---
-echo "🚢 Deploying Observability Agents..."
 cat <<EOF > "$STACK_DIR/docker-compose.yml"
 services:
   gatus:
     image: twinproduction/gatus:latest
     container_name: gatus
     restart: unless-stopped
-    ports:
-      - 8080:8080
-    volumes:
-      - ./gatus-config:/config
-
+    ports: ["8080:8080"]
+    volumes: ["./gatus-config:/config"]
   beszel-agent:
     image: henrygd/beszel-agent:latest
     container_name: beszel-agent
-    restart: unless-stopped
     network_mode: host
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro # Secure read-only mount
-    environment:
-      - PORT=45876
-
+    restart: unless-stopped
+    volumes: ["/var/run/docker.sock:/var/run/docker.sock:ro"]
+    environment: ["PORT=45876"]
   dozzle-agent:
     image: amir20/dozzle:latest
     container_name: dozzle-agent
-    restart: unless-stopped
     command: agent
-    ports:
-      - 7007:7007
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro # Secure read-only mount
+    ports: ["7007:7007"]
+    restart: unless-stopped
+    volumes: ["/var/run/docker.sock:/var/run/docker.sock:ro"]
 EOF
 
 docker compose -f "$STACK_DIR/docker-compose.yml" up -d
 
 echo "------------------------------------------------"
 echo "✅ BOOTSTRAP COMPLETE"
-echo "Active Dashboard: http://$(hostname -I | awk '{print $1}'):8080"
 echo "------------------------------------------------"
+echo "1. Authenticate VS Code: 'code tunnel user login'"
+echo "2. Dashboard: http://$(hostname -I | awk '{print $1}'):8080"
+echo "3. Ansible: Ready for local playbooks."
